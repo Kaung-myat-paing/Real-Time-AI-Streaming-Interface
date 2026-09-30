@@ -67,13 +67,10 @@ class AiStreamController extends Controller
             @ob_flush();
             @flush();
         }, 200, [
-            'Content-Type'                 => 'text/event-stream; charset=UTF-8',
-            'Cache-Control'                => 'no-cache, must-revalidate',
-            'Connection'                   => 'keep-alive',
-            'X-Accel-Buffering'            => 'no',
-            'Access-Control-Allow-Origin'  => '*',
-            'Access-Control-Allow-Methods' => 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers' => 'Content-Type, Authorization',
+            'Content-Type'      => 'text/event-stream; charset=UTF-8',
+            'Cache-Control'     => 'no-cache, must-revalidate',
+            'Connection'        => 'keep-alive',
+            'X-Accel-Buffering' => 'no',
         ]);
     }
 }

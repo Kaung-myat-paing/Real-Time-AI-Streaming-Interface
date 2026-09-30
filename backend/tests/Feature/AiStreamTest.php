@@ -108,14 +108,11 @@ class AiStreamTest extends TestCase
         $this->assertStringContainsString('data: [DONE]', $content);
     }
 
-    public function test_get_request_returns_usage_message(): void
+    public function test_get_request_returns_405_method_not_allowed(): void
     {
         $response = $this->get('/api/ai/stream');
 
-        $response->assertStatus(200);
-        $response->assertJsonFragment([
-            'message' => 'Send a POST request with a JSON body containing a "prompt" field.',
-        ]);
+        $response->assertStatus(405);
     }
 
     private function fakeStreamService(Closure $handler): void
