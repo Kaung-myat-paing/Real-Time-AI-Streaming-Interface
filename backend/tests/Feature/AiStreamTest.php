@@ -18,7 +18,7 @@ class AiStreamTest extends TestCase
         parent::setUp();
 
         Config::set('openrouter.api_key', 'sk-or-v1-test-key');
-        Config::set('openrouter.model', 'anthropic/claude-3.5-haiku');
+        Config::set('openrouter.model', 'nvidia/nemotron-3-ultra-550b-a55b:free');
         Config::set('openrouter.max_tokens', 1024);
     }
 

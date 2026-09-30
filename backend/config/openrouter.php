@@ -30,12 +30,14 @@ return [
     | Default Model
     |--------------------------------------------------------------------------
     |
-    | The default model to use for text generation via OpenRouter.
-    | See https://openrouter.ai/models for available models.
+    | Default model: OpenRouter free tier (no credits consumed, rate-limited)
+    | To use a paid model (better quality, higher limits), set OPENROUTER_MODEL
+    | in .env to any model from https://openrouter.ai/models
+    | Requires an OpenRouter API key: https://openrouter.ai/settings/keys
     |
     */
 
-    'model' => env('OPENROUTER_MODEL', 'openai/gpt-3.5-turbo'),
+    'model' => env('OPENROUTER_MODEL', 'nvidia/nemotron-3-ultra-550b-a55b:free'),
 
     /*
     |--------------------------------------------------------------------------
