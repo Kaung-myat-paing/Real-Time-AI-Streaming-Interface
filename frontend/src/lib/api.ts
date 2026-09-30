@@ -22,9 +22,12 @@ export async function streamAiResponse({
 
   if (!response.ok) {
     const body = await response.json().catch(() => null);
-    throw new Error(
-      body?.error ?? `Request failed with status ${response.status}`
-    );
+    const message =
+      body?.errors?.prompt?.[0] ??
+      body?.message ??
+      body?.error ??
+      `Request failed with status ${response.status}`;
+    throw new Error(message);
   }
 
   if (!response.body) {

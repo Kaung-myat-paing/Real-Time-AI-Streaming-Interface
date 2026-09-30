@@ -34,9 +34,17 @@ function App() {
   const [waitingForFirstToken, setWaitingForFirstToken] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
   const pendingEventRef = useRef<string>('')
+  const bufferRef = useRef<string>('')
+  const outputRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     setHasContent(text.length > 0)
+  }, [text])
+
+  useEffect(() => {
+    if (outputRef.current) {
+      outputRef.current.scrollTop = outputRef.current.scrollHeight
+    }
   }, [text])
 
   useEffect(() => {
@@ -65,44 +73,64 @@ function App() {
 
       const reader = body.getReader()
       const decoder = new TextDecoder('utf-8')
+      bufferRef.current = ''
 
-      while (true) {
-        const { value, done } = await reader.read()
-        if (done) break
+      const processLine = (line: string): boolean => {
+        const trimmedLine = line.trim()
+        if (!trimmedLine) {
+          pendingEventRef.current = ''
+          return false
+        }
 
-        const chunk = decoder.decode(value, { stream: true })
-        const lines = chunk.split('\n')
+        const parsed = parseSSELine(trimmedLine)
+        if (!parsed) return false
 
-        for (const line of lines) {
-          const trimmedLine = line.trim()
-          if (!trimmedLine) {
-            pendingEventRef.current = ''
-            continue
-          }
+        if (parsed.event) {
+          pendingEventRef.current = parsed.event
+        } else if (parsed.data !== null && pendingEventRef.current) {
+          const eventName = pendingEventRef.current
+          pendingEventRef.current = ''
 
-          const parsed = parseSSELine(trimmedLine)
-          if (!parsed) continue
-
-          if (parsed.event) {
-            pendingEventRef.current = parsed.event
-          } else if (parsed.data !== null && pendingEventRef.current) {
-            const eventName = pendingEventRef.current
-            pendingEventRef.current = ''
-
-            if (eventName === 'content_block_delta') {
-              const data = parsed.data as { text?: string }
-              if (data.text) {
-                setWaitingForFirstToken(false)
-                setText((prev) => prev + data.text)
-              }
-            } else if (eventName === 'error') {
-              const data = parsed.data as { message?: string }
-              setError(data.message ?? 'An error occurred while streaming.')
-            } else if (eventName === 'done') {
-              break
+          if (eventName === 'content_block_delta') {
+            const data = parsed.data as { text?: string }
+            if (data.text) {
+              setWaitingForFirstToken(false)
+              setText((prev) => prev + data.text)
             }
+          } else if (eventName === 'error') {
+            const data = parsed.data as { message?: string }
+            setError(data.message ?? 'An error occurred while streaming.')
+          } else if (eventName === 'done') {
+            return true
           }
         }
+        return false
+      }
+
+      let done = false
+      while (true) {
+        const { value, done: readerDone } = await reader.read()
+        if (readerDone) break
+
+        bufferRef.current += decoder.decode(value, { stream: true })
+        const lines = bufferRef.current.split('\n')
+        bufferRef.current = lines.pop() ?? ''
+
+        for (const line of lines) {
+          if (processLine(line)) {
+            done = true
+            break
+          }
+        }
+        if (done) break
+      }
+
+      if (!done) {
+        bufferRef.current += decoder.decode()
+        if (bufferRef.current.trim()) {
+          processLine(bufferRef.current)
+        }
+        bufferRef.current = ''
       }
     } catch (err: unknown) {
       if (err instanceof Error && err.name !== 'AbortError') {
@@ -190,21 +218,29 @@ function App() {
               Ask me anything...
             </label>
             <div className="flex gap-3">
-              <textarea
-                id="prompt-input"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                onKeyDown={handleKeyDown}
-                disabled={isStreaming}
-                rows={3}
-                placeholder="Type your prompt here..."
-                className={`flex-1 resize-none rounded-xl border bg-slate-950/60 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 shadow-inner focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-slate-950 transition-colors ${
-                  error
-                    ? 'border-red-500/60 focus:ring-red-400'
-                    : 'border-white/10 focus:ring-indigo-400'
-                } ${isStreaming ? 'cursor-not-allowed opacity-60' : ''}`}
-                style={{ maxHeight: '160px', overflowY: 'auto' }}
-              />
+              <div className="flex-1 flex flex-col gap-1">
+                <textarea
+                  id="prompt-input"
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  disabled={isStreaming}
+                  rows={3}
+                  maxLength={4000}
+                  placeholder="Type your prompt here..."
+                  className={`flex-1 resize-none rounded-xl border bg-slate-950/60 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 shadow-inner focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-slate-950 transition-colors ${
+                    error
+                      ? 'border-red-500/60 focus:ring-red-400'
+                      : 'border-white/10 focus:ring-indigo-400'
+                  } ${isStreaming ? 'cursor-not-allowed opacity-60' : ''}`}
+                  style={{ maxHeight: '160px', overflowY: 'auto' }}
+                />
+                {prompt.length > 3500 && (
+                  <span className="self-end text-xs text-slate-500 tabular-nums">
+                    {prompt.length.toLocaleString()} / 4,000
+                  </span>
+                )}
+              </div>
               <div className="flex flex-col gap-2">
                 <motion.button
                   type="button"
@@ -260,7 +296,8 @@ function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
-            className="relative rounded-2xl border border-white/10 bg-slate-950/70 px-6 py-6 min-h-[200px] shadow-inner shadow-slate-900/60 flex items-center justify-center"
+            ref={outputRef}
+            className="relative rounded-2xl border border-white/10 bg-slate-950/70 px-6 py-6 min-h-[200px] max-h-[60vh] overflow-y-auto scrollbar-thin shadow-inner shadow-slate-900/60 flex items-center justify-center"
           >
             <AnimatePresence mode="wait">
               {hasContent || waitingForFirstToken ? (
@@ -270,7 +307,7 @@ function App() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.2 }}
-                  className="text-sm font-mono leading-relaxed tracking-tight whitespace-pre-wrap text-left w-full"
+                  className="text-sm font-mono leading-relaxed tracking-tight whitespace-pre-wrap break-words text-left w-full"
                 >
                   {text}
                   {(isStreaming || waitingForFirstToken) && (
