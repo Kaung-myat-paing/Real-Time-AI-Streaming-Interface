@@ -10,17 +10,13 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AiStreamController extends Controller
 {
-    public function __construct(
-        private readonly AiStreamServiceContract $aiStream,
-    ) {}
-
     public function __invoke(Request $request): StreamedResponse|JsonResponse
     {
         $apiKey = config('openrouter.api_key');
 
         if (empty($apiKey)) {
             return response()->json([
-                'error' => 'OpenRouter API key is not configured.',
+                'error' => 'AI service not configured. Set OPENROUTER_API_KEY in your .env',
             ], 500);
         }
 
@@ -30,7 +26,9 @@ class AiStreamController extends Controller
 
         $prompt = preg_replace('/\s+/', ' ', trim($validated['prompt']));
 
-        return response()->stream(function () use ($prompt) {
+        $aiStream = app(AiStreamServiceContract::class);
+
+        return response()->stream(function () use ($prompt, $aiStream) {
             if (function_exists('apache_setenv')) {
                 @apache_setenv('no-gzip', '1');
             }
@@ -40,7 +38,7 @@ class AiStreamController extends Controller
             @ini_set('implicit_flush', '1');
             ob_implicit_flush(true);
 
-            $this->aiStream->stream(
+            $aiStream->stream(
                 prompt: $prompt,
                 onEvent: function (string $event, mixed $data): void {
                     echo "event: {$event}\n";
