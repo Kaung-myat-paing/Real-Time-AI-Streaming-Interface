@@ -1,0 +1,24 @@
+name: Bug report
+description: Report a reproducible problem with the streaming application.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior and the expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Include the prompt, endpoint, browser, and environment details needed to reproduce it.
+    validations:
+      required: true
+  - type: textarea
+    id: checks
+    attributes:
+      label: Validation
+      description: Include relevant output from `composer test`, `npm run lint`, or `npm run build`.

@@ -2,6 +2,8 @@
 
 ![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react) ![Laravel](https://img.shields.io/badge/laravel-%23FF2D20.svg?style=for-the-badge&logo=laravel)
 
+[![AI Ready](https://img.shields.io/badge/AI--Ready-yes-brightgreen?style=flat)](https://github.com/johnpapa/ai-ready)
+
 A production-grade prototype for streaming AI responses with zero perceived latency using **HTTP Streaming**. 
 
 > **🎥 Demo Preview**
@@ -39,6 +41,17 @@ php artisan serve
 cd ../frontend
 npm install
 npm run dev
+```
+
+### Contributing
+
+Create a focused branch, make the smallest complete change, and open a pull request with the affected behavior and validation steps. Read [`AGENTS.md`](AGENTS.md) for the repository conventions and maintenance matrix.
+
+Before opening a pull request, run:
+
+```bash
+cd backend && composer test
+cd ../frontend && npm run lint && npm run build
 ```
 
 **Author:** Kaung Myat Paing | [LinkedIn](https://www.linkedin.com/in/kmpeg/) | [GitHub](https://github.com/Kaung-myat-paing)
